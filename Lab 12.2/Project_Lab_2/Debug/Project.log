@@ -1,0 +1,15 @@
+﻿Build started 11/5/2015 7:37:01 PM.
+     1>Project "C:\Users\chad\Desktop\Project_Lab_2\Project.vcxproj" on node 2 (Build target(s)).
+     1>_MASM:
+         Assembling sumarrays.asm...
+         cmd.exe /C "C:\Users\chad\AppData\Local\Temp\tmp3c1768e2055541e5a29c36598fc8e9ad.cmd"
+         ml.exe /c /nologo /Sg /WX /Zi /Fo"Debug\sumarrays.obj" /Fl".lst" /I "c:\Irvine" /W3 /errorReport:prompt  /Tasumarrays.asm
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\chad\Desktop\Project_Lab_2\Debug\Project.exe" /NOLOGO /LIBPATH:c:\Irvine user32.lib irvine32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"C:\Users\chad\Desktop\Project_Lab_2\Debug\Project.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE:NO /IMPLIB:"C:\Users\chad\Desktop\Project_Lab_2\Debug\Project.lib" /MACHINE:X86 /SAFESEH:NO Debug\main.obj
+         Debug\sumarrays.obj
+         Project.vcxproj -> C:\Users\chad\Desktop\Project_Lab_2\Debug\Project.exe
+     1>Done Building Project "C:\Users\chad\Desktop\Project_Lab_2\Project.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.89
