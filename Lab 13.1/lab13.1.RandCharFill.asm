@@ -22,45 +22,55 @@ cw dword ?
 ;writeconsoleattr function
 
 .code
-RandASCII PROTO,
-	pChar: PTR DWORD  ;Pointer to Char Byte in memory
-RandColor PROTO,
-	pColor: PTR DWORD  ;Pointer to Color Byte in memory
+RandASCII PROTO,									; function to generate a random ascii char
+	pChar: PTR DWORD									;Pointer to Char Byte in memory
+
+RandColor PROTO,									; function to generate a random color hex code
+	pColor: PTR DWORD									;Pointer to Color Byte in memory
 
 main PROC 
 
-  ; Get the console output handle:
+; Get the console output handle:
 	INVOKE GetStdHandle, STD_OUTPUT_HANDLE
 	mov outHandle,eax
-  ; get console info
+
+; Get console info
 	invoke GetConsoleScreenBufferInfo,
 	outHandle,
 	ADDR consoleInfo
 
-mov eax,0
-mov ebx,0
-mov ecx,0
-mov edx,0
+; Clear registers for easier debugging
+	mov eax,0
+	mov ebx,0
+	mov ecx,0
+	mov edx,0
 
-mov ax, consoleInfo.dwSize.X
-mov bx, consoleInfo.dwSize.Y
-mul bx
-mov consoleCharSize, eax
+; calculate how chars needed to fill console
+	mov ax, consoleInfo.dwSize.X
+	mov bx, consoleInfo.dwSize.Y
+	mul bx
+	mov consoleCharSize, eax
 
-mov ecx, consoleCharSize
+; set ecx/loop counter to char count
+	mov ecx, consoleCharSize
 
-Call Randomize
+; set random seed
+	Call Randomize
 
+; begin loop of writing chars to console
 L1:
 
-INVOKE RandASCII, ADDR rChar
-INVOKE RandColor, ADDR rColor
+; get a random ascii char and a random color hex
+	INVOKE RandASCII, ADDR rChar
+	INVOKE RandColor, ADDR rColor
 
 ; set x,y
 	mov ax, tc.x
 	mov bx, consoleInfo.dwSize.X
 	cmp bx, ax
 	ja X_COORD_OK
+
+	; increment row and set col to 0 because at end of row
 	mov tc.x, 0
 	inc tc.y
 
@@ -71,41 +81,39 @@ INVOKE RandColor, ADDR rColor
 	ja Y_COORD_CAPPED
 
 
+; set color
+	INVOKE WriteConsoleOutputAttribute,
+		outHandle,		; console output handle
+		ADDR rColor,	; location in memory of char
+		1,				; first cell coordinates
+		tc,				; pointer to buffer
+		ADDR cw			; output count
 
-INVOKE WriteConsoleOutputAttribute,
-    outHandle,
-    ADDR rColor,
-    1,
-   tc,
-   ADDR cw
-
-INVOKE WriteConsoleOutputCharacter,
-    outHandle,	; console output handle
-    ADDR rChar,	; size of buffer
-    1,	; first cell coordinates
-   tc,	; pointer to buffer
-   ADDR cw	; output count
+; write char at x,y
+	INVOKE WriteConsoleOutputCharacter,
+		outHandle,		; console output handle
+		ADDR rChar,		; location in memory of char
+		1,				; first cell coordinates
+		tc,				; pointer to buffer
+		ADDR cw			; output count
 
 
+; increment col
+	inc tc.x
 
-inc tc.x
-
-dec ecx; LOOP L1
-jnz L1
+dec ecx
+jnz L1		; using loop was blowing up
 
 Y_COORD_CAPPED:
-
-; 4th char for red?
-	
-
+; over last row, exit
 
 	exit
 main ENDP
 
 
-RandASCII PROC USES eax esi,
+RandASCII PROC USES eax esi, ; return random ascii char - limit to just ascii char number range
 	pChar: PTR DWORD  ;Pointer to Char Byte in memory
-
+	
 	mov eax, 128
 	Call RandomRange
 	add eax, 20h
@@ -116,20 +124,19 @@ RandASCII PROC USES eax esi,
 	ret
 RandASCII ENDP
 
-RandColor PROC USES eax ebx esi,
+RandColor PROC USES eax ebx esi, ; return random color - force 50% chance that color is red
 	pColor: PTR DWORD  ;Pointer to Char Byte in memory
 
 	mov eax, 0Fh
 	Call RandomRange
 	
-	mov bl, 8h ; half of F
+	mov bl, 8h ; half of F for 50% red
 	cmp bl, al
 	ja COLOR_OK
 
 	mov al, 0Ch
 
 COLOR_OK:
-;and al,00001111b
 	mov esi, pColor
 	mov [esi], al
 

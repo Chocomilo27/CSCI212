@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
+Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/19/15 13:38:02
 ..\Lab 13.1\lab13.1.RandCharFill.asm			     Page 1 - 1
 
 
@@ -46,19 +46,21 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
 				;writeconsoleattr function
 
  00000000			.code
-				RandASCII PROTO,
-					pChar: PTR DWORD  ;Pointer to Char Byte in memory
-				RandColor PROTO,
-					pColor: PTR DWORD  ;Pointer to Color Byte in memory
+				RandASCII PROTO,									; function to generate a random ascii char
+					pChar: PTR DWORD									;Pointer to Char Byte in memory
+
+				RandColor PROTO,									; function to generate a random color hex code
+					pColor: PTR DWORD									;Pointer to Color Byte in memory
 
  00000000			main PROC 
 
-				  ; Get the console output handle:
+				; Get the console output handle:
 					INVOKE GetStdHandle, STD_OUTPUT_HANDLE
  00000000  6A F5	   *	    push    -00000000Bh
  00000002  E8 00000000 E   *	    call   GetStdHandle
  00000007  A3 00000000 R		mov outHandle,eax
-				  ; get console info
+
+				; Get console info
 					invoke GetConsoleScreenBufferInfo,
 					outHandle,
 					ADDR consoleInfo
@@ -66,28 +68,34 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
  00000011  FF 35 00000000 R *	    push   outHandle
  00000017  E8 00000000 E   *	    call   GetConsoleScreenBufferInfo
 
- 0000001C  B8 00000000		mov eax,0
- 00000021  BB 00000000		mov ebx,0
- 00000026  B9 00000000		mov ecx,0
- 0000002B  BA 00000000		mov edx,0
+				; Clear registers for easier debugging
+ 0000001C  B8 00000000			mov eax,0
+ 00000021  BB 00000000			mov ebx,0
+ 00000026  B9 00000000			mov ecx,0
+ 0000002B  BA 00000000			mov edx,0
 
- 00000030  66| A1		mov ax, consoleInfo.dwSize.X
+				; calculate how chars needed to fill console
+ 00000030  66| A1			mov ax, consoleInfo.dwSize.X
 	   00000004 R
- 00000036  66| 8B 1D		mov bx, consoleInfo.dwSize.Y
+ 00000036  66| 8B 1D			mov bx, consoleInfo.dwSize.Y
 	   00000006 R
- 0000003D  66| F7 E3		mul bx
- 00000040  A3 0000001A R	mov consoleCharSize, eax
+ 0000003D  66| F7 E3			mul bx
+ 00000040  A3 0000001A R		mov consoleCharSize, eax
 
- 00000045  8B 0D 0000001A R	mov ecx, consoleCharSize
+				; set ecx/loop counter to char count
+ 00000045  8B 0D 0000001A R		mov ecx, consoleCharSize
 
- 0000004B  E8 00000000 E	Call Randomize
+				; set random seed
+ 0000004B  E8 00000000 E		Call Randomize
 
+				; begin loop of writing chars to console
  00000050			L1:
 
-				INVOKE RandASCII, ADDR rChar
+				; get a random ascii char and a random color hex
+					INVOKE RandASCII, ADDR rChar
  00000050  68 0000001E R   *	    push   OFFSET rChar
  00000055  E8 0000008D	   *	    call   RandASCII
-				INVOKE RandColor, ADDR rColor
+					INVOKE RandColor, ADDR rColor
  0000005A  68 0000001F R   *	    push   OFFSET rColor
  0000005F  E8 000000A0	   *	    call   RandColor
 
@@ -98,6 +106,8 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
 	   00000004 R
  00000071  66| 3B D8			cmp bx, ax
  00000074  77 10			ja X_COORD_OK
+
+					; increment row and set col to 0 because at end of row
  00000076  66| C7 05			mov tc.x, 0
 	   00000020 R
 	   0000
@@ -113,13 +123,13 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
  00000096  77 48			ja Y_COORD_CAPPED
 
 
-
-				INVOKE WriteConsoleOutputAttribute,
-				    outHandle,
-				    ADDR rColor,
-				    1,
-				   tc,
-				   ADDR cw
+				; set color
+					INVOKE WriteConsoleOutputAttribute,
+						outHandle,		; console output handle
+						ADDR rColor,	; location in memory of char
+						1,				; first cell coordinates
+						tc,				; pointer to buffer
+						ADDR cw			; output count
  00000098  68 00000024 R   *	    push   OFFSET cw
  0000009D  FF 35 00000020 R *	    push   dword  ptr tc
  000000A3  6A 01	   *	    push   +000000001h
@@ -127,12 +137,13 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
  000000AA  FF 35 00000000 R *	    push   outHandle
  000000B0  E8 00000000 E   *	    call   WriteConsoleOutputAttribute
 
-				INVOKE WriteConsoleOutputCharacter,
-				    outHandle,	; console output handle
-				    ADDR rChar,	; size of buffer
-				    1,	; first cell coordinates
-				   tc,	; pointer to buffer
-				   ADDR cw	; output count
+				; write char at x,y
+					INVOKE WriteConsoleOutputCharacter,
+						outHandle,		; console output handle
+						ADDR rChar,		; location in memory of char
+						1,				; first cell coordinates
+						tc,				; pointer to buffer
+						ADDR cw			; output count
  000000B5  68 00000024 R   *	    push   OFFSET cw
  000000BA  FF 35 00000020 R *	    push   dword  ptr tc
  000000C0  6A 01	   *	    push   +000000001h
@@ -141,18 +152,15 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
  000000CD  E8 00000000 E   *	    call   WriteConsoleOutputCharacterA
 
 
-
- 000000D2  66| FF 05		inc tc.x
+				; increment col
+ 000000D2  66| FF 05			inc tc.x
 	   00000020 R
 
- 000000D9  49			dec ecx; LOOP L1
- 000000DA  0F 85 FFFFFF70	jnz L1
+ 000000D9  49			dec ecx
+ 000000DA  0F 85 FFFFFF70	jnz L1		; using loop was blowing up
 
  000000E0			Y_COORD_CAPPED:
-
-				; 4th char for red?
-					
-
+				; over last row, exit
 
 					exit
  000000E0  6A 00	   *	    push   +000000000h
@@ -160,9 +168,9 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
  000000E7			main ENDP
 
 
- 000000E7			RandASCII PROC USES eax esi,
+ 000000E7			RandASCII PROC USES eax esi, ; return random ascii char - limit to just ascii char number range
 					pChar: PTR DWORD  ;Pointer to Char Byte in memory
-
+					
  000000E7  55		   *	    push   ebp
  000000E8  8B EC	   *	    mov    ebp, esp
  000000EA  50		   *	    push   eax
@@ -181,7 +189,7 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
  00000101  C2 0004	   *	    ret    00004h
  00000104			RandASCII ENDP
 
- 00000104			RandColor PROC USES eax ebx esi,
+ 00000104			RandColor PROC USES eax ebx esi, ; return random color - force 50% chance that color is red
 					pColor: PTR DWORD  ;Pointer to Char Byte in memory
 
  00000104  55		   *	    push   ebp
@@ -192,14 +200,13 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
  0000010A  B8 0000000F			mov eax, 0Fh
  0000010F  E8 00000000 E		Call RandomRange
 					
- 00000114  B3 08			mov bl, 8h ; half of F
+ 00000114  B3 08			mov bl, 8h ; half of F for 50% red
  00000116  3A D8			cmp bl, al
  00000118  77 02			ja COLOR_OK
 
  0000011A  B0 0C			mov al, 0Ch
 
  0000011C			COLOR_OK:
-				;and al,00001111b
  0000011C  8B 75 08			mov esi, pColor
  0000011F  88 06			mov [esi], al
 
@@ -213,7 +220,7 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
 
 
 				end main
-Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/14/15 23:14:10
+Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/19/15 13:38:02
 ..\Lab 13.1\lab13.1.RandCharFill.asm			     Symbols 2 - 1
 
 
