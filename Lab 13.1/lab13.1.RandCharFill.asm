@@ -11,13 +11,13 @@
 INCLUDE Irvine32.inc
 
 .data
-outHandle HANDLE 0 ; standard output handle
-consoleInfo CONSOLE_SCREEN_BUFFER_INFO <> ; CONSOLE_SCREEN_BUFFER_INFO structure
-consoleCharSize DWORD ? ; number of chars in console
-rChar BYTE ?
-rColor BYTE ?
-tc COORD <0,0>
-cw dword ?
+outHandle HANDLE 0									; standard output handle
+consoleInfo CONSOLE_SCREEN_BUFFER_INFO <>			; CONSOLE_SCREEN_BUFFER_INFO structure
+consoleCharSize DWORD ?								; number of chars in console
+rChar BYTE ?										; memory storage for random ascii char
+rColor BYTE ?										; memory storage for random color
+tc COORD <0,0>										; COORD structure
+cw dword ?											; output count - needed for WriteConsole functions
 
 ;writeconsoleattr function
 
