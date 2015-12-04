@@ -1,18 +1,14 @@
-Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/19/15 19:11:49
-..\Lab 14.1\lab14.1.asm					     Page 1 - 1
+Microsoft (R) Macro Assembler Version 14.00.23026.0	    12/03/15 16:19:41
+..\Lab 14.2\lab14.2.quad.asm				     Page 1 - 1
 
 
-				; Program Name:           Lab14.1.asm
+				; Program Name:           Lab14.2.asm
 
-				; Program Description:	Implement the following C++ code in assembly language. Substitute calls
-				;						to WriteString for the printf() function calls:
-				;								double X;
-				;								double Y;
-				;								if( X < Y )
-				;								    printf("X is lower\n");
-				;								else
-				;								    printf("X is not lower\n");
-				; Date: 11/19/2015
+				; Program Description:	Prompt the user for coefficients a, b, and c of a polynomial in the 
+				;						 form ax2+bx +c=0. Calculate and display the real roots of the polynomial
+				;						 using the quadratic formula. If any root is imaginary, display an 
+				;						 appropriate message.
+				; Date: 12/03/2015
 
 
 				INCLUDE Irvine32.inc
@@ -35,47 +31,175 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/19/15 19:11:49
 			      C 
 
  00000000			.data
- 00000000			valX REAL8 7.5 
-	   401E000000000000
- 00000008			valY REAL8 2.5
-	   4004000000000000
+					;strings for user prompt/response
+ 00000000 43 6F 65 66 66			str1 BYTE "Coefficient A for Ax^2 + Bx + C: ",0
+	   69 63 69 65 6E
+	   74 20 41 20 66
+	   6F 72 20 41 78
+	   5E 32 20 2B 20
+	   42 78 20 2B 20
+	   43 3A 20 00
+ 00000022 43 6F 65 66 66			str2 BYTE "Coefficient B for Ax^2 + Bx + C: ",0
+	   69 63 69 65 6E
+	   74 20 42 20 66
+	   6F 72 20 41 78
+	   5E 32 20 2B 20
+	   42 78 20 2B 20
+	   43 3A 20 00
+ 00000044 43 6F 65 66 66			str3 BYTE "Coefficient C for Ax^2 + Bx + C: ",0
+	   69 63 69 65 6E
+	   74 20 43 20 66
+	   6F 72 20 41 78
+	   5E 32 20 2B 20
+	   42 78 20 2B 20
+	   43 3A 20 00
+ 00000066 54 68 69 73 20			str4 BYTE "This polynomial has at least one imaginary root",0
+	   70 6F 6C 79 6E
+	   6F 6D 69 61 6C
+	   20 68 61 73 20
+	   61 74 20 6C 65
+	   61 73 74 20 6F
+	   6E 65 20 69 6D
+	   61 67 69 6E 61
+	   72 79 20 72 6F
+	   6F 74 00
+ 00000096 52 6F 6F 74 20			str5 BYTE "Root 1: ",0
+	   31 3A 20 00
+ 0000009F 52 6F 6F 74 20			str6 BYTE "Root 2: ",0
+	   32 3A 20 00
 
- 00000010 58 20 69 73 20	msg_xLy BYTE "X is lower",0
-	   6C 6F 77 65 72
-	   00
- 0000001B 58 20 69 73 20	msg_yLx BYTE "X is not lower",0
-	   6E 6F 74 20 6C
-	   6F 77 65 72 00
+					; variables to hold the coefficients provided from the user
+ 000000A8					coeffA REAL8 ?
+	   0000000000000000
+ 000000B0					coeffB REAL8 ?
+	   0000000000000000
+ 000000B8					coeffC REAL8 ?
+	   0000000000000000
+
+					; misc variables to pop/push stack since cannot use literals
+ 000000C0					two REAL8 2.0
+	   4000000000000000
+ 000000C8					four REAL8 4.0
+	   4010000000000000
+ 000000D0					zero REAL8 0.0
+	   0000000000000000
+ 000000D8					junk REAL8 0.0
+	   0000000000000000
+					
+					;
+ 000000E0					sqrt REAL8 ?							; store for sqrt(B^2 - 4ac)
+	   0000000000000000
+
 
  00000000			.code
  00000000			main PROC 
 
- 00000000  DD 05 00000000 R		fld valX						; move valX into stack
+					; init
+ 00000000  E8 00000000 E			call Clrscr								; clear output
+ 00000005  9B DB E3				finit									; init floating point
+ 00000008  E8 000000B6				call getCoefficients					; get data from user
 
- 00000006  DC 1D 00000008 R		FCOMP valY						; compare to valY
- 0000000C  DF E0			fnstsw ax						; move status word into ax
- 0000000E  9E			    sahf							; copy AH into eflags
- 0000000F  73 07			jnb y_below_x					; is x<y?
+					; calc expression under radical (radicand): B^2 - 4ac
+ 0000000D  DD 05 000000B0 R			fld coeffB								; copy B to top of stack
+ 00000013  D8 C8				fmul ST(0),ST(0)						; square B by multiplying it by itself		B^2
+ 00000015  DD 05 000000C8 R			fld four								; copy 4 to top of stack
+ 0000001B  DC 0D 000000A8 R			fmul coeffA								; multiply top of stack by A				4*A
+ 00000021  DC 0D 000000B8 R			fmul coeffC								; multiply top of stack by C				*C
+ 00000027  DE E9				fsub									; subtract stack(1) by top of stack and
+																; store in top of stack						B^2 - 4ac
+															
+					; make sure radicand is positive	
+ 00000029  DD 05 000000D0 R			fld zero								; copy 0 to top of stack
+ 0000002F  DB F1				fcomi ST(0),ST(1)						; compare zero and radicand
+ 00000031  77 70				ja IMAGINARY_ROOT						; radicand is negative, go to imaginary root response
 
- 00000011			X_BELOW_Y:
- 00000011  BA 00000010 R		mov edx, OFFSET msg_xLy
- 00000016  EB 07			jmp WRITE_OUT
+					; calc square root of radicand
+ 00000033  DD 1D 000000D8 R			fstp junk								; get rid of zero value on top of stack
+ 00000039  D9 FA				fsqrt									; square root top of stack
+ 0000003B  DD 1D 000000E0 R			fstp sqrt								; save sqrt
 
- 00000018			Y_BELOW_X:
- 00000018  BA 0000001B R		mov edx, OFFSET msg_yLx
- 0000001D  EB 00			jmp WRITE_OUT
-					
- 0000001F			WRITE_OUT:
- 0000001F  E8 00000000 E		call WriteString
+					; calc first root
+						; quotient: -B+sqrt | -B+sqrt
+ 00000041  DD 05 000000B0 R				fld coeffB							; move B to stack
+ 00000047  D9 E0					fchs								; change sign
+ 00000049  DC 05 000000E0 R				fadd sqrt							; -B + sqrt
+						
+						; divisor: 2a
+ 0000004F  DD 05 000000A8 R				fld coeffA							; move A to stack
+ 00000055  DC 0D 000000C0 R				fmul two							; multiply by 2
 
+ 0000005B  DE F9				fdivp ST(1),ST(0)						; DIVIDE
+
+						; show first answer
+ 0000005D  BA 00000096 R				mov edx, OFFSET str5				; move offset of prompt into EDX register
+ 00000062  E8 00000000 E				call WriteString					; Call Irvine32 WriteString function
+ 00000067  E8 00000000 E				call WriteFloat						; Use Irvine32 WriteFloat function to write top of stack to console
+ 0000006C  E8 00000000 E				call Crlf							; Use Irvine32 Crlf function to write new line to console
+
+					; calc second root
+						; quotient: -B-sqrt | -B-sqrt
+ 00000071  DD 05 000000B0 R				fld coeffB							; move B to stack
+ 00000077  D9 E0					fchs								; change sign
+ 00000079  DC 25 000000E0 R				fsub sqrt							; -B + sqrt
+						
+						; divisor: 2a
+ 0000007F  DD 05 000000A8 R				fld coeffA							; move A to stack
+ 00000085  DC 0D 000000C0 R				fmul two							; multiply by 2
+
+ 0000008B  DE F9				fdivp ST(1),ST(0)						; DIVIDE
+
+						; show first answer
+ 0000008D  BA 0000009F R				mov edx, OFFSET str6				; move offset of prompt into EDX register
+ 00000092  E8 00000000 E				call WriteString					; Call Irvine32 WriteString function
+ 00000097  E8 00000000 E				call WriteFloat						; Use Irvine32 WriteFloat function to write top of stack to console
+ 0000009C  E8 00000000 E				call Crlf							; Use Irvine32 Crlf function to write new line to console
+
+
+ 000000A1  EB 0A			JMP NORMAL_EXIT
+
+ 000000A3			IMAGINARY_ROOT:
+ 000000A3  BA 00000066 R		mov edx, OFFSET str4
+ 000000A8  E8 00000000 E		call WriteString
+
+ 000000AD			NORMAL_EXIT:
+ 000000AD  E8 00000000 E		Call Crlf
+ 000000B2  E8 00000000 E		Call Crlf
+ 000000B7  E8 00000000 E		Call WaitMsg
 					exit
- 00000024  6A 00	   *	    push   +000000000h
- 00000026  E8 00000000 E   *	    call   ExitProcess
- 0000002B			main ENDP
+ 000000BC  6A 00	   *	    push   +000000000h
+ 000000BE  E8 00000000 E   *	    call   ExitProcess
+ 000000C3			main ENDP
+
+
+				;-----------------------------------------
+ 000000C3			getCoefficients PROC
+				;-----------------------------------------
+
+					; ask user for A
+ 000000C3  BA 00000000 R			mov edx, OFFSET str1					; move offset of prompt into EDX register
+ 000000C8  E8 00000000 E			call WriteString						; Call Irvine32 WriteString function
+ 000000CD  E8 00000000 E			call ReadFloat							; Use Irvine32 ReadFloat function to get coefficient
+ 000000D2  DD 1D 000000A8 R			fstp coeffA								; read response from stack and store in variable
+
+					; ask user for B
+ 000000D8  BA 00000000 R			mov edx, OFFSET str1					; move offset of prompt into EDX register
+ 000000DD  E8 00000000 E			call WriteString						; Call Irvine32 WriteString function
+ 000000E2  E8 00000000 E			call ReadFloat							; Use Irvine32 ReadFloat function to get coefficient
+ 000000E7  DD 1D 000000B0 R			fstp coeffB								; read response from stack and store in variable
+
+					; ask user for C
+ 000000ED  BA 00000000 R			mov edx, OFFSET str1					; move offset of prompt into EDX register
+ 000000F2  E8 00000000 E			call WriteString						; Call Irvine32 WriteString function
+ 000000F7  E8 00000000 E			call ReadFloat							; Use Irvine32 ReadFloat function to get coefficient
+ 000000FC  DD 1D 000000B8 R			fstp coeffC								; read response from stack and store in variable
+
+ 00000102  C3				ret
+ 00000103			getCoefficients ENDP
+
 
 				end main
-Microsoft (R) Macro Assembler Version 14.00.23026.0	    11/19/15 19:11:49
-..\Lab 14.1\lab14.1.asm					     Symbols 2 - 1
+Microsoft (R) Macro Assembler Version 14.00.23026.0	    12/03/15 16:19:41
+..\Lab 14.2\lab14.2.quad.asm				     Symbols 2 - 1
 
 
 
@@ -168,8 +292,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000002A Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000002B Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 000000E8 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000103 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -276,10 +400,10 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000002B Public STDCALL
-  X_BELOW_Y  . . . . . . . . . .	L Near	 00000011 _TEXT	
-  Y_BELOW_X  . . . . . . . . . .	L Near	 00000018 _TEXT	
-  WRITE_OUT  . . . . . . . . . .	L Near	 0000001F _TEXT	
+getCoefficients  . . . . . . . .	P Near	 000000C3 _TEXT	Length= 00000040 Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000000C3 Public STDCALL
+  IMAGINARY_ROOT . . . . . . . .	L Near	 000000A3 _TEXT	
+  NORMAL_EXIT  . . . . . . . . .	L Near	 000000AD _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -501,10 +625,15 @@ WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
+coeffA . . . . . . . . . . . . .	QWord	 000000A8 _DATA	
+coeffB . . . . . . . . . . . . .	QWord	 000000B0 _DATA	
+coeffC . . . . . . . . . . . . .	QWord	 000000B8 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+four . . . . . . . . . . . . . .	QWord	 000000C8 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
+junk . . . . . . . . . . . . . .	QWord	 000000D8 _DATA	
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
 lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
 lightGray  . . . . . . . . . . .	Number	 00000007h   
@@ -512,14 +641,19 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
-msg_xLy  . . . . . . . . . . . .	Byte	 00000010 _DATA	
-msg_yLx  . . . . . . . . . . . .	Byte	 0000001B _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-valX . . . . . . . . . . . . . .	QWord	 00000000 _DATA	
-valY . . . . . . . . . . . . . .	QWord	 00000008 _DATA	
+sqrt . . . . . . . . . . . . . .	QWord	 000000E0 _DATA	
+str1 . . . . . . . . . . . . . .	Byte	 00000000 _DATA	
+str2 . . . . . . . . . . . . . .	Byte	 00000022 _DATA	
+str3 . . . . . . . . . . . . . .	Byte	 00000044 _DATA	
+str4 . . . . . . . . . . . . . .	Byte	 00000066 _DATA	
+str5 . . . . . . . . . . . . . .	Byte	 00000096 _DATA	
+str6 . . . . . . . . . . . . . .	Byte	 0000009F _DATA	
+two  . . . . . . . . . . . . . .	QWord	 000000C0 _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
+zero . . . . . . . . . . . . . .	QWord	 000000D0 _DATA	
 
 	   0 Warnings
 	   0 Errors
