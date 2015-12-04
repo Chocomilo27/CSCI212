@@ -1,7 +1,7 @@
 ; Program Name:           Lab14.2.asm
 
 ; Program Description:	Prompt the user for coefficients a, b, and c of a polynomial in the 
-;						 form ax2+bx +c=0. Calculate and display the real roots of the polynomial
+;						 form ax2+bx+c=0. Calculate and display the real roots of the polynomial
 ;						 using the quadratic formula. If any root is imaginary, display an 
 ;						 appropriate message.
 ; Date: 12/03/2015
