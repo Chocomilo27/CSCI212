@@ -32,7 +32,10 @@
     <MASM Include="..\Lab 14.1\lab14.1.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </MASM>
-    <MASM Include="..\Lab 14.2\lab14.2.quad.asm" />
+    <MASM Include="..\Lab 14.2\lab14.2.quad.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </MASM>
+    <MASM Include="..\Lab 15.1\lab15.1.sieve_erato.asm" />
     <MASM Include="..\Lab 2.1\lab2.1.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </MASM>

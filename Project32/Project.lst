@@ -1,15 +1,20 @@
-Microsoft (R) Macro Assembler Version 14.00.23026.0	    12/03/15 16:19:41
-..\Lab 14.2\lab14.2.quad.asm				     Page 1 - 1
+Microsoft (R) Macro Assembler Version 14.00.23026.0	    12/10/15 08:56:07
+..\Lab 15.1\lab15.1.sieve_erato.asm			     Page 1 - 1
 
 
-				; Program Name:           Lab14.2.asm
+				; Program Name:           Lab15.asm
 
-				; Program Description:	Prompt the user for coefficients a, b, and c of a polynomial in the 
-				;						 form ax2+bx +c=0. Calculate and display the real roots of the polynomial
-				;						 using the quadratic formula. If any root is imaginary, display an 
-				;						 appropriate message.
+				; Program Description:	Write a program that generates all prime numbers between 2 and 1000, using 
+				;						 the Sieve of Eratosthenes method. You can find many articles that describe 
+				;						 the method for finding primes in this manner on the Internet. Display all 
+				;						 the prime values.
 				; Date: 12/03/2015
 
+				; HOW TO
+				; creates BYTE array and uses index number as the number. Value is used to 
+				; determine whether number is prime or not
+				;   marked: not prime - check next number
+				;   not marked: prime - mark its multiples as not prime
 
 				INCLUDE Irvine32.inc
 			      C ; Include file for Irvine32.lib             (Irvine32.inc)
@@ -31,175 +36,154 @@ Microsoft (R) Macro Assembler Version 14.00.23026.0	    12/03/15 16:19:41
 			      C 
 
  00000000			.data
-					;strings for user prompt/response
- 00000000 43 6F 65 66 66			str1 BYTE "Coefficient A for Ax^2 + Bx + C: ",0
-	   69 63 69 65 6E
-	   74 20 41 20 66
-	   6F 72 20 41 78
-	   5E 32 20 2B 20
-	   42 78 20 2B 20
-	   43 3A 20 00
- 00000022 43 6F 65 66 66			str2 BYTE "Coefficient B for Ax^2 + Bx + C: ",0
-	   69 63 69 65 6E
-	   74 20 42 20 66
-	   6F 72 20 41 78
-	   5E 32 20 2B 20
-	   42 78 20 2B 20
-	   43 3A 20 00
- 00000044 43 6F 65 66 66			str3 BYTE "Coefficient C for Ax^2 + Bx + C: ",0
-	   69 63 69 65 6E
-	   74 20 43 20 66
-	   6F 72 20 41 78
-	   5E 32 20 2B 20
-	   42 78 20 2B 20
-	   43 3A 20 00
- 00000066 54 68 69 73 20			str4 BYTE "This polynomial has at least one imaginary root",0
-	   70 6F 6C 79 6E
-	   6F 6D 69 61 6C
-	   20 68 61 73 20
-	   61 74 20 6C 65
-	   61 73 74 20 6F
-	   6E 65 20 69 6D
-	   61 67 69 6E 61
-	   72 79 20 72 6F
-	   6F 74 00
- 00000096 52 6F 6F 74 20			str5 BYTE "Root 1: ",0
-	   31 3A 20 00
- 0000009F 52 6F 6F 74 20			str6 BYTE "Root 2: ",0
-	   32 3A 20 00
+ = 00000002				start = 2d							; the first prime number to check
+ = 000003E8				max = 1000d							; the last prime number to check
 
-					; variables to hold the coefficients provided from the user
- 000000A8					coeffA REAL8 ?
-	   0000000000000000
- 000000B0					coeffB REAL8 ?
-	   0000000000000000
- 000000B8					coeffC REAL8 ?
-	   0000000000000000
-
-					; misc variables to pop/push stack since cannot use literals
- 000000C0					two REAL8 2.0
-	   4000000000000000
- 000000C8					four REAL8 4.0
-	   4010000000000000
- 000000D0					zero REAL8 0.0
-	   0000000000000000
- 000000D8					junk REAL8 0.0
-	   0000000000000000
-					
-					;
- 000000E0					sqrt REAL8 ?							; store for sqrt(B^2 - 4ac)
-	   0000000000000000
-
+ 00000000 01				marked BYTE 1d						; value to use to mark a number
+ 00000001  000003E7 [			markedList BYTE 999 DUP(0)			; array for numbers (0 based)
+	    00
+	   ]
 
  00000000			.code
+
+				; prototype for function that marks multiples of given number
+				markNumbers PROTO,
+					nbr: WORD,
+					mltpl: WORD,
+					stop: word
+
+
  00000000			main PROC 
 
-					; init
- 00000000  E8 00000000 E			call Clrscr								; clear output
- 00000005  9B DB E3				finit									; init floating point
- 00000008  E8 000000B6				call getCoefficients					; get data from user
+				; clear registers
+ 00000000  B8 00000000			mov eax,0
+ 00000005  BB 00000000			mov ebx,0
+ 0000000A  B9 00000000			mov ecx,0
+ 0000000F  BA 00000000			mov edx,0
 
-					; calc expression under radical (radicand): B^2 - 4ac
- 0000000D  DD 05 000000B0 R			fld coeffB								; copy B to top of stack
- 00000013  D8 C8				fmul ST(0),ST(0)						; square B by multiplying it by itself		B^2
- 00000015  DD 05 000000C8 R			fld four								; copy 4 to top of stack
- 0000001B  DC 0D 000000A8 R			fmul coeffA								; multiply top of stack by A				4*A
- 00000021  DC 0D 000000B8 R			fmul coeffC								; multiply top of stack by C				*C
- 00000027  DE E9				fsub									; subtract stack(1) by top of stack and
-																; store in top of stack						B^2 - 4ac
-															
-					; make sure radicand is positive	
- 00000029  DD 05 000000D0 R			fld zero								; copy 0 to top of stack
- 0000002F  DB F1				fcomi ST(0),ST(1)						; compare zero and radicand
- 00000031  77 70				ja IMAGINARY_ROOT						; radicand is negative, go to imaginary root response
+				; check numbers for prime
+					; init registers
+ 00000014  66| BA 0002				mov dx, start					; start with 2 for first prime number
+ 00000018  66| B9 03E7				mov cx, LENGTHOF markedList		; set loop counter to length of list (999)
+ 0000001C  BE 00000001 R			mov esi, OFFSET markedList		; set esi up to location of start of marked list
+ 00000021  03 F2				add esi, edx					; move esi to location of first number (2)
 
-					; calc square root of radicand
- 00000033  DD 1D 000000D8 R			fstp junk								; get rid of zero value on top of stack
- 00000039  D9 FA				fsqrt									; square root top of stack
- 0000003B  DD 1D 000000E0 R			fstp sqrt								; save sqrt
+ 00000023			CHECK_LOOP:
+					; check if number^2 is greater than the max, if it is, any remaining not marked numbers are prime
+ 00000023  60				PUSHAD								; save registers
+ 00000024  66| 8B C2			mov ax, dx							; put dx in ax
+ 00000027  66| F7 E0			mul ax								; square it
+ 0000002A  66| BB 03E8			mov bx, max							; compare result to max
+ 0000002E  66| 3B C3			cmp ax, bx
+ 00000031  61				POPAD								; restore registers
+ 00000032  77 1E			ja CHECK_OVER						; skip checking the rest of the numbers if ax>bx
 
-					; calc first root
-						; quotient: -B+sqrt | -B+sqrt
- 00000041  DD 05 000000B0 R				fld coeffB							; move B to stack
- 00000047  D9 E0					fchs								; change sign
- 00000049  DC 05 000000E0 R				fadd sqrt							; -B + sqrt
-						
-						; divisor: 2a
- 0000004F  DD 05 000000A8 R				fld coeffA							; move A to stack
- 00000055  DC 0D 000000C0 R				fmul two							; multiply by 2
+					; check if number is marked
+ 00000034  8A 06			mov al, [esi]
+ 00000036  3C 00			cmp al,0
+ 00000038  77 14			ja IS_MARKED
 
- 0000005B  DE F9				fdivp ST(1),ST(0)						; DIVIDE
+					; not marked / prime: mark its multiples
+					INVOKE markNumbers, dx, dx, max
+ 0000003A  68 000003E8	   *	    push   +0000003E8h
+ 0000003F  83 EC 02	   *	    sub    esp, 002h
+ 00000042  66| 52	   *	    push   dx
+ 00000044  83 EC 02	   *	    sub    esp, 002h
+ 00000047  66| 52	   *	    push   dx
+ 00000049  E8 00000044	   *	    call   markNumbers
 
-						; show first answer
- 0000005D  BA 00000096 R				mov edx, OFFSET str5				; move offset of prompt into EDX register
- 00000062  E8 00000000 E				call WriteString					; Call Irvine32 WriteString function
- 00000067  E8 00000000 E				call WriteFloat						; Use Irvine32 WriteFloat function to write top of stack to console
- 0000006C  E8 00000000 E				call Crlf							; Use Irvine32 Crlf function to write new line to console
-
-					; calc second root
-						; quotient: -B-sqrt | -B-sqrt
- 00000071  DD 05 000000B0 R				fld coeffB							; move B to stack
- 00000077  D9 E0					fchs								; change sign
- 00000079  DC 25 000000E0 R				fsub sqrt							; -B + sqrt
-						
-						; divisor: 2a
- 0000007F  DD 05 000000A8 R				fld coeffA							; move A to stack
- 00000085  DC 0D 000000C0 R				fmul two							; multiply by 2
-
- 0000008B  DE F9				fdivp ST(1),ST(0)						; DIVIDE
-
-						; show first answer
- 0000008D  BA 0000009F R				mov edx, OFFSET str6				; move offset of prompt into EDX register
- 00000092  E8 00000000 E				call WriteString					; Call Irvine32 WriteString function
- 00000097  E8 00000000 E				call WriteFloat						; Use Irvine32 WriteFloat function to write top of stack to console
- 0000009C  E8 00000000 E				call Crlf							; Use Irvine32 Crlf function to write new line to console
+ 0000004E			IS_MARKED:
+ 0000004E  42				inc edx
+ 0000004F  46				inc esi
+ 00000050  E2 D1			LOOP CHECK_LOOP
 
 
- 000000A1  EB 0A			JMP NORMAL_EXIT
+ 00000052			CHECK_OVER:
 
- 000000A3			IMAGINARY_ROOT:
- 000000A3  BA 00000066 R		mov edx, OFFSET str4
- 000000A8  E8 00000000 E		call WriteString
+				; output the prime numbers
+					; init registers
+ 00000052  BA 00000000				mov edx, 0						; clear edx
+ 00000057  66| BA 0002				mov dx, start
+ 0000005B  66| B9 03E7				mov cx, LENGTHOF markedList
+ 0000005F  BE 00000001 R			mov esi, OFFSET markedList
+ 00000064  03 F2				add esi, edx
 
- 000000AD			NORMAL_EXIT:
- 000000AD  E8 00000000 E		Call Crlf
- 000000B2  E8 00000000 E		Call Crlf
- 000000B7  E8 00000000 E		Call WaitMsg
+ 00000066			OUTPUT_LOOP:
+					; check if number is marked, if not go to next number
+ 00000066  8A 06			mov al, [esi]
+ 00000068  3C 00			cmp al,0
+ 0000006A  77 0C			ja ISMARKED
+
+					; not marked / prime: output edx
+ 0000006C  8B C2			mov eax, edx
+ 0000006E  E8 00000000 E		Call WriteDec
+ 00000073  E8 00000000 E		Call Crlf
+
+ 00000078			ISMARKED:
+ 00000078  42				inc edx
+ 00000079  46				inc esi
+ 0000007A  E2 EA			LOOP OUTPUT_LOOP
+
+ 0000007C  E8 00000000 E		Call Crlf
+ 00000081  E8 00000000 E		Call Crlf
+ 00000086  E8 00000000 E		Call WaitMsg
 					exit
- 000000BC  6A 00	   *	    push   +000000000h
- 000000BE  E8 00000000 E   *	    call   ExitProcess
- 000000C3			main ENDP
+ 0000008B  6A 00	   *	    push   +000000000h
+ 0000008D  E8 00000000 E   *	    call   ExitProcess
+ 00000092			main ENDP
 
 
 				;-----------------------------------------
- 000000C3			getCoefficients PROC
+ 00000092			markNumbers PROC USES eax ebx ecx edx esi,
+					nbr: WORD,
+					mltpl: WORD,
+					stop: WORD
 				;-----------------------------------------
+ 00000092  55		   *	    push   ebp
+ 00000093  8B EC	   *	    mov    ebp, esp
+ 00000095  50		   *	    push   eax
+ 00000096  53		   *	    push   ebx
+ 00000097  51		   *	    push   ecx
+ 00000098  52		   *	    push   edx
+ 00000099  56		   *	    push   esi
+ 0000009A  0F B7 45 08			movzx eax, nbr
+ 0000009E  66| 03 45 0C			add ax, mltpl			; increment n
+ 000000A2  0F B7 5D 10			movzx ebx, stop			; where to stop recursion
+ 000000A6  3B C3			cmp eax, ebx			; compare current n and stop, end recursion if above
+ 000000A8  77 27			ja END_RECURSION
+					
+					; mark this array index
+ 000000AA  BE 00000001 R		mov esi, OFFSET markedList
+ 000000AF  03 F0			add esi, eax
+ 000000B1  8A 15 00000000 R		mov dl, marked
+ 000000B7  88 16			mov [esi], dl
 
-					; ask user for A
- 000000C3  BA 00000000 R			mov edx, OFFSET str1					; move offset of prompt into EDX register
- 000000C8  E8 00000000 E			call WriteString						; Call Irvine32 WriteString function
- 000000CD  E8 00000000 E			call ReadFloat							; Use Irvine32 ReadFloat function to get coefficient
- 000000D2  DD 1D 000000A8 R			fstp coeffA								; read response from stack and store in variable
+					; recursively check next multiple
+					INVOKE markNumbers, ax, mltpl, stop
+ 000000B9  83 EC 02	   *	    sub    esp, 002h
+ 000000BC  66| FF 75 10	   *	    push   word  ptr ss:[ebp]+00010h
+ 000000C0  83 EC 02	   *	    sub    esp, 002h
+ 000000C3  66| FF 75 0C	   *	    push   word  ptr ss:[ebp]+0000Ch
+ 000000C7  83 EC 02	   *	    sub    esp, 002h
+ 000000CA  66| 50	   *	    push   ax
+ 000000CC  E8 FFFFFFC1	   *	    call   markNumbers
 
-					; ask user for B
- 000000D8  BA 00000000 R			mov edx, OFFSET str1					; move offset of prompt into EDX register
- 000000DD  E8 00000000 E			call WriteString						; Call Irvine32 WriteString function
- 000000E2  E8 00000000 E			call ReadFloat							; Use Irvine32 ReadFloat function to get coefficient
- 000000E7  DD 1D 000000B0 R			fstp coeffB								; read response from stack and store in variable
+ 000000D1			END_RECURSION:
 
-					; ask user for C
- 000000ED  BA 00000000 R			mov edx, OFFSET str1					; move offset of prompt into EDX register
- 000000F2  E8 00000000 E			call WriteString						; Call Irvine32 WriteString function
- 000000F7  E8 00000000 E			call ReadFloat							; Use Irvine32 ReadFloat function to get coefficient
- 000000FC  DD 1D 000000B8 R			fstp coeffC								; read response from stack and store in variable
-
- 00000102  C3				ret
- 00000103			getCoefficients ENDP
+					ret
+ 000000D1  5E		   *	    pop    esi
+ 000000D2  5A		   *	    pop    edx
+ 000000D3  59		   *	    pop    ecx
+ 000000D4  5B		   *	    pop    ebx
+ 000000D5  58		   *	    pop    eax
+ 000000D6  C9		   *	    leave  
+ 000000D7  C2 000C	   *	    ret    0000Ch
+ 000000DA			markNumbers ENDP
 
 
 				end main
-Microsoft (R) Macro Assembler Version 14.00.23026.0	    12/03/15 16:19:41
-..\Lab 14.2\lab14.2.quad.asm				     Symbols 2 - 1
+Microsoft (R) Macro Assembler Version 14.00.23026.0	    12/10/15 08:56:07
+..\Lab 15.1\lab15.1.sieve_erato.asm			     Symbols 2 - 1
 
 
 
@@ -292,8 +276,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 000000E8 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000103 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 000003E8 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000DA Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -400,10 +384,17 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-getCoefficients  . . . . . . . .	P Near	 000000C3 _TEXT	Length= 00000040 Public STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000000C3 Public STDCALL
-  IMAGINARY_ROOT . . . . . . . .	L Near	 000000A3 _TEXT	
-  NORMAL_EXIT  . . . . . . . . .	L Near	 000000AD _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000092 Public STDCALL
+  CHECK_LOOP . . . . . . . . . .	L Near	 00000023 _TEXT	
+  IS_MARKED  . . . . . . . . . .	L Near	 0000004E _TEXT	
+  CHECK_OVER . . . . . . . . . .	L Near	 00000052 _TEXT	
+  OUTPUT_LOOP  . . . . . . . . .	L Near	 00000066 _TEXT	
+  ISMARKED . . . . . . . . . . .	L Near	 00000078 _TEXT	
+markNumbers  . . . . . . . . . .	P Near	 00000092 _TEXT	Length= 00000048 Public STDCALL
+  nbr  . . . . . . . . . . . . .	Word	 bp + 00000008
+  mltpl  . . . . . . . . . . . .	Word	 bp + 0000000C
+  stop . . . . . . . . . . . . .	Word	 bp + 00000010
+  END_RECURSION  . . . . . . . .	L Near	 000000D1 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -625,15 +616,10 @@ WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
-coeffA . . . . . . . . . . . . .	QWord	 000000A8 _DATA	
-coeffB . . . . . . . . . . . . .	QWord	 000000B0 _DATA	
-coeffC . . . . . . . . . . . . .	QWord	 000000B8 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
-four . . . . . . . . . . . . . .	QWord	 000000C8 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
-junk . . . . . . . . . . . . . .	QWord	 000000D8 _DATA	
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
 lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
 lightGray  . . . . . . . . . . .	Number	 00000007h   
@@ -641,19 +627,14 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
+markedList . . . . . . . . . . .	Byte	 00000001 _DATA	
+marked . . . . . . . . . . . . .	Byte	 00000000 _DATA	
+max  . . . . . . . . . . . . . .	Number	 000003E8h   
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-sqrt . . . . . . . . . . . . . .	QWord	 000000E0 _DATA	
-str1 . . . . . . . . . . . . . .	Byte	 00000000 _DATA	
-str2 . . . . . . . . . . . . . .	Byte	 00000022 _DATA	
-str3 . . . . . . . . . . . . . .	Byte	 00000044 _DATA	
-str4 . . . . . . . . . . . . . .	Byte	 00000066 _DATA	
-str5 . . . . . . . . . . . . . .	Byte	 00000096 _DATA	
-str6 . . . . . . . . . . . . . .	Byte	 0000009F _DATA	
-two  . . . . . . . . . . . . . .	QWord	 000000C0 _DATA	
+start  . . . . . . . . . . . . .	Number	 00000002h   
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
-zero . . . . . . . . . . . . . .	QWord	 000000D0 _DATA	
 
 	   0 Warnings
 	   0 Errors
